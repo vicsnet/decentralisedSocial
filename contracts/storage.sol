@@ -6,9 +6,11 @@ import {Permissioned, Permission} from "@fhenixprotocol/contracts/access/Permiss
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Storage {
-  // mapping of user to struct
+  address owner;
   // post storage struct to include likes tips creator address
   uint256 postId;
+  // total report for post to be flagged
+  uint256 totalReport;
 
   // Array to store all IDs
   uint256[] public ids;
@@ -20,6 +22,7 @@ contract Storage {
   //  total user tip in the contact
   mapping(address => uint256) private totalTips;
   // user
+  // mapping of user to struct
   mapping(uint256 => Post) myPost;
 
   struct Post {
@@ -31,14 +34,19 @@ contract Storage {
     bool flagged;
   }
 
+  modifier onlyOwner() {
+    require(msg.sender == owner, "Not owner");
+    _;
+  }
   // create post
   function createPost(string memory _content, eaddress _creator) external {
     uint256 id = postId++;
     Post memory post = myPost[id];
     post.content = _content;
     post.creator = _creator;
-
+    ids.push(id);
     // emit event
+
   }
 
   // tip post
@@ -80,41 +88,74 @@ contract Storage {
       "TRY AGAIN LATER"
     );
     IERC20(token).transferFrom(address(this), msg.sender, amount_);
+    totalTips[msg.sender] -= amount_;
   }
 
   //   myTotalTip
+  function myAllTips(
+    Permission calldata perm,
+    address tipped
+  ) public view returns (uint256) {
+    totalTips[tipped];
+  }
 
   // read single post
   function readSinglePost(
     Permission calldata perm,
     uint256 postId_
-  ) external view onlySender(perm) returns (Post memory) {
+  )
+    external
+    view
+    onlySender(perm)
+    returns (string memory, uint256, uint256, euint256, eaddress)
+  {
+    string memory contents;
     Post memory post = myPost[postId_];
-    return post;
+    if (post.flagged == true) {
+      contents = FHE.sealoutput(post.content, perm.publicKey);
+    } else {
+      contents = post.content;
+    }
+
+    return (contents, post.likes, post.report, post.tips, post.creator);
   }
+
   // read all post
 
-  function readAllPost(Permission calldata perm) external view returns(string[] memory, uint256[] memory, uint256[] memory){
+  function readAllPost(
+    Permission calldata perm
+  )
+    external
+    view
+    returns (string[] memory, uint256[] memory, uint256[] memory)
+  {
     uint256 len = ids.length;
-    string[] memory contents =new string[](len);
+    string[] memory contents = new string[](len);
     uint256[] memory likes = new uint256[](len);
     uint256[] memory reports = new uint256[](len);
 
     for (uint256 i = 0; i < len; i++) {
-        Post storage post = myPost[i];
-        if(post.flagged == true){
-            contents[i] = FHE.sealoutput(post.content, perm.publicKey);
-        }else{
-
+      Post storage post = myPost[i];
+      if (post.flagged == true) {
+        contents[i] = FHE.sealoutput(post.content, perm.publicKey);
+      } else {
         contents[i] = post.content;
-        }
-        likes[i] = post.likes;
-        reports[i] = post.report;  
+      }
+      likes[i] = post.likes;
+      reports[i] = post.report;
     }
 
-    return(contents, likes, reports);
+    return (contents, likes, reports);
   }
 
   // if post is flagged hash the content
-  
+  function flagPostStatus(postId_) external onlyOwner {
+    Post memory post = myPost[id];
+    post.flagged = true;
+  }
+
+  //   set total report post need
+  function setTotalReport(uint256 totalReport_) public onlyOwner {
+    totalReport = totalReport_;
+  }
 }
