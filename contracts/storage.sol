@@ -9,9 +9,12 @@ contract Storage {
   // mapping of user to struct
   // post storage struct to include likes tips creator address
   uint256 postId;
+
+  // Array to store all IDs
+  uint256[] public ids;
   // user credibility
 
-uint256 totalCredibility;
+  uint256 totalCredibility;
   mapping(eaddress => uint256) credibility;
 
   //  total user tip in the contact
@@ -21,7 +24,7 @@ uint256 totalCredibility;
 
   struct Post {
     string content;
-    eu256 tips;
+    euint256 tips;
     uint256 likes;
     eaddress creator;
     uint256 report;
@@ -54,38 +57,43 @@ uint256 totalCredibility;
   // like post
   function likePost(uint256 postId_) external {
     Post memory post = myPost[postId_];
-    post.likes +=1;
+    post.likes += 1;
   }
 
   // flag Post
-//   to flag post you must have 15% credibility
+  //   to flag post you must have 15% credibility
 
-  function flagPost(uint256 postId_) external{
-     eaddress flagger = FHE.encryptedValue(msg.sender); 
-    uint256 percent = ((15/100) * totalCredibility )* 100;
+  function flagPost(uint256 postId_) external {
+    eaddress flagger = FHE.encryptedValue(msg.sender);
+    uint256 percent = ((15 / 100) * totalCredibility) * 100;
     require(credibility[flagger] * 100 >= percent, "NOT_CREDIBLE");
     Post memory post = myPost[postId_];
-    post.report +=1;
+    post.report += 1;
   }
 
-
   // withdrawTip
-  function withdrawTip(uint256 amount_, address token_) external{
+  function withdrawTip(uint256 amount_, address token_) external {
     uint256 balances = totalTips[msg.sender];
-    require(amount_ <= balances, 'Insufficient Tip');
-    require(IECR20(token_).balanceOf(address(this)) > amount_, "TRY AGAIN LATER");
+    require(amount_ <= balances, "Insufficient Tip");
+    require(
+      IECR20(token_).balanceOf(address(this)) > amount_,
+      "TRY AGAIN LATER"
+    );
     IERC20(token).transferFrom(address(this), msg.sender, amount_);
   }
 
-//   myTotalTip
+  //   myTotalTip
 
-// read single post
-function readSinglePost(uint256 postId_) external view returns(Post memory){
+  // read single post
+  function readSinglePost(
+    Permission calldata perm,
+    uint256 postId_
+  ) external view onlySender(perm) returns (Post memory) {
+    Post memory post = myPost[postId_];
+    return post;
+  }
+  // read all post
 
-}
-//   read all post
 
-
-
-// if post is flagged hash the content
+  // if post is flagged hash the content
 }
