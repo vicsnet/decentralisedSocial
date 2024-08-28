@@ -94,6 +94,27 @@ contract Storage {
   }
   // read all post
 
+  function readAllPost(Permission calldata perm) external view returns(string[] memory, uint256[] memory, uint256[] memory){
+    uint256 len = ids.length;
+    string[] memory contents =new string[](len);
+    uint256[] memory likes = new uint256[](len);
+    uint256[] memory reports = new uint256[](len);
+
+    for (uint256 i = 0; i < len; i++) {
+        Post storage post = myPost[i];
+        if(post.flagged == true){
+            contents[i] = FHE.sealoutput(post.content, perm.publicKey);
+        }else{
+
+        contents[i] = post.content;
+        }
+        likes[i] = post.likes;
+        reports[i] = post.report;  
+    }
+
+    return(contents, likes, reports);
+  }
 
   // if post is flagged hash the content
+  
 }
